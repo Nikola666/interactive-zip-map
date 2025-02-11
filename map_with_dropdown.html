@@ -1,0 +1,105 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <style>
+        .zipcode-label {
+            font-size: 10px;
+            font-weight: bold;
+            background: rgba(255, 255, 255, 0.7); /* ✅ Semi-transparent white */
+            border: 1px solid black;
+            padding: 2px;
+        }
+    </style>
+</head>
+<body>
+
+    <select id="citySelect" onchange="changeCenter()" 
+        style="position: absolute; top: 10px; left: 50px; z-index: 1000; background: white; padding: 5px;">
+        <option value="Austin">Austin</option>
+        <option value="Houston">Houston</option>
+        <option value="Dallas">Dallas</option>
+        <option value="San Antonio">San Antonio</option>
+        <option value="Fort Worth">Fort Worth</option>
+    </select>
+
+    <div id="map" style="width: 100%; height: 600px;"></div>
+
+    <script>
+        var cityLocations = {
+            "Austin": [30.2672, -97.7431],
+            "Houston": [29.7604, -95.3698],
+            "Dallas": [32.7767, -96.7970],
+            "San Antonio": [29.4241, -98.4936],
+            "Fort Worth": [32.7555, -97.3308]
+        };
+
+        // ✅ Create Leaflet Map
+        var map = L.map('map').setView(cityLocations["Austin"], 12);
+
+        // ✅ Add a Base Layer (OSM tiles)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 18,
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // ✅ Function to get color based on loss ratio
+        function getColor(value) {
+            return value > 80 ? '#800026' :  // Dark Red
+                   value > 60 ? '#BD0026' :  // Red
+                   value > 40 ? '#E31A1C' :  // Orange-Red
+                   value > 20 ? '#FC4E2A' :  // Orange
+                   value > 10 ? '#FD8D3C' :  // Light Orange
+                               '#FFEDA0';   // Yellow
+        }
+
+        // ✅ Load GeoJSON Data
+        fetch('geo_data.json')
+            .then(response => response.json())
+            .then(data => {
+                L.geoJSON(data, {
+                    style: function (feature) {
+                        let loss_ratio = feature.properties.random_percent || 0; // Ensure it's a number
+                        return {
+                            fillColor: getColor(loss_ratio),
+                            weight: 1,
+                            opacity: 1, // Keeps borders visible
+                            color: 'black', // Border color
+                            fillOpacity: 0.3 // ✅ Transparent enough to see base map
+                        };
+                    },
+                    onEachFeature: function (feature, layer) {
+                        if (feature.properties && feature.properties.zipcode) {
+                            let zip = feature.properties.zipcode;
+                            let loss_ratio = feature.properties.random_percent || 0;
+                            
+                            // ✅ Display ZIP Code labels permanently
+                            layer.bindTooltip(
+                                `<b>${zip}</b>`,
+                                { permanent: true, direction: "center", className: "zipcode-label" }
+                            ).openTooltip();
+
+                            // ✅ Show loss ratio in popups
+                            layer.bindPopup(`<b>ZIP Code:</b> ${zip}<br><b>Loss Ratio:</b> ${loss_ratio.toFixed(1)}%`);
+                        }
+                    }
+                }).addTo(map);
+            })
+            .catch(error => console.error("Error loading GeoJSON:", error));
+
+        // ✅ Dropdown Function to Change Map Center
+        function changeCenter() {
+            var selectedCity = document.getElementById("citySelect").value;
+            var newLocation = cityLocations[selectedCity];
+
+            map.setView(newLocation, 12);
+        }
+    </script>
+
+</body>
+</html>
