@@ -59,7 +59,7 @@
         }
 
         // ✅ Load GeoJSON Data
-        fetch('geo_data.json')
+        fetch('https://Nikola666.github.io/interactive-zip-map/geo_data.json')
             .then(response => response.json())
             .then(data => {
                 L.geoJSON(data, {
